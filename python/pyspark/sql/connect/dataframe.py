@@ -270,11 +270,11 @@ class DataFrame(ParentDataFrame):
 
     @property
     def dtypes(self) -> List[Tuple[str, str]]:
-        return [(str(f.name), f.dataType.simpleString()) for f in self.schema.fields]
+        return [(str(f.name), f.dataType.simpleString()) for f in self._original_schema.fields]
 
     @property
     def columns(self) -> List[str]:
-        return copy.deepcopy(self._original_schema.names)
+        return [field.name for field in self._original_schema.fields]
 
     @property
     def sparkSession(self) -> "SparkSession":
@@ -1723,7 +1723,7 @@ class DataFrame(ParentDataFrame):
 
                     # Try best to verify the column name with cached schema
                     # If fails, fall back to the server side validation
-                    if not verify_col_name(item, self.schema):
+                    if not verify_col_name(item, self._original_schema):
                         self.select(item).isLocal()
 
                 return self._col(item)
@@ -2047,12 +2047,12 @@ class DataFrame(ParentDataFrame):
         def foreach_func(row: Any) -> None:
             f(row)
 
-        self.select(F.struct(*self.schema.fieldNames()).alias("row")).select(
+        self.select(F.struct(*self._original_schema.fieldNames()).alias("row")).select(
             F.udf(foreach_func, StructType())("row")  # type: ignore[arg-type]
         ).collect()
 
     def foreachPartition(self, f: Callable[[Iterator[Row]], None]) -> None:
-        schema = self.schema
+        schema = self._original_schema
         field_converters = [
             ArrowTableToRowsConversion._create_converter(f.dataType) for f in schema.fields
         ]
