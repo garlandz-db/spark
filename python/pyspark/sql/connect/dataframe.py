@@ -1788,6 +1788,7 @@ class DataFrame(ParentDataFrame):
             query = self._plan.to_proto(self._session.client)
             self._cached_schema = self._session.client.schema(query)
         return self._cached_schema
+
     @property
     def schema(self) -> StructType:
         return copy.deepcopy(self._schema)
