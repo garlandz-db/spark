@@ -1778,7 +1778,7 @@ class DataFrame(ParentDataFrame):
         return self._session.client.to_pandas(query, self._plan.observations)
 
     @property
-    def schema(self) -> StructType:
+    def _schema(self) -> StructType:
         # Schema caching is correct in most cases. Connect is lazy by nature. This means that
         # we only resolve the plan when it is submitted for execution or analysis. We do not
         # cache intermediate resolved plan. If the input (changes table, view redefinition,
@@ -1787,7 +1787,10 @@ class DataFrame(ParentDataFrame):
         if self._cached_schema is None:
             query = self._plan.to_proto(self._session.client)
             self._cached_schema = self._session.client.schema(query)
-        return copy.deepcopy(self._cached_schema)
+        return self._cached_schema
+    @property
+    def schema(self) -> StructType:
+        return copy.deepcopy(self._schema)
 
     def isLocal(self) -> bool:
         query = self._plan.to_proto(self._session.client)
@@ -1987,11 +1990,6 @@ class DataFrame(ParentDataFrame):
     def registerTempTable(self, name: str) -> None:
         warnings.warn("Deprecated in 2.0, use createOrReplaceTempView instead.", FutureWarning)
         self.createOrReplaceTempView(name)
-
-    def _original_schema(self) -> StructType:
-        if self._cached_schema:
-            return self._cached_schema
-        return self.schema
 
     def _map_partitions(
         self,
