@@ -19,7 +19,7 @@ package org.apache.spark.sql.connect.planner
 
 import java.io.EOFException
 
-import org.apache.spark.SparkException
+import org.apache.spark.{SparkException, SparkIllegalStateException}
 import org.apache.spark.api.python.{PythonException, PythonWorkerUtils, SimplePythonFunction, SpecialLengths, StreamingPythonRunner}
 import org.apache.spark.internal.Logging
 import org.apache.spark.internal.LogKeys.FUNCTION_NAME
@@ -97,9 +97,10 @@ class PythonStreamingQueryListener(listener: SimplePythonFunction, sessionHolder
               s"process for function $functionName: $msg",
             null)
         case otherValue =>
-          throw new IllegalStateException(
-            s"Unexpected return value $otherValue from the " +
-              s"Python worker.")
+          throw new SparkIllegalStateException(
+            errorClass = "SPARK_CONNECT_ILLEGAL_STATE.STREAMING_QUERY.UNEXPECTED_RETURN_VALUE",
+            messageParameters = Map(
+              "details" -> s"Unexpected return value $otherValue from the Python worker"))
       }
     } catch {
       case eof: EOFException =>

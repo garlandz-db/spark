@@ -25,6 +25,7 @@ import scala.util.control.NonFatal
 import com.google.protobuf.{Timestamp => ProtoTimestamp}
 import io.grpc.stub.StreamObserver
 
+import org.apache.spark.SparkIllegalStateException
 import org.apache.spark.connect.proto
 import org.apache.spark.connect.proto.ExecutePlanResponse
 import org.apache.spark.internal.{Logging, LogKeys}
@@ -86,8 +87,9 @@ class PipelineEventSender(
         })
       }
     } else {
-      throw new IllegalStateException(
-        s"Cannot send event after shutdown for session ${sessionHolder.sessionId}")
+      throw new SparkIllegalStateException(
+        errorClass = "SPARK_CONNECT_ILLEGAL_STATE.STREAM_LIFECYCLE.EVENT_SEND_AFTER_SHUTDOWN",
+        messageParameters = Map.empty)
     }
   }
 

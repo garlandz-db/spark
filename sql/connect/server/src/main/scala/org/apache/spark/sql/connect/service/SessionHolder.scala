@@ -28,7 +28,7 @@ import scala.util.Try
 import com.google.common.base.Ticker
 import com.google.common.cache.{Cache, CacheBuilder}
 
-import org.apache.spark.{SparkEnv, SparkException, SparkSQLException}
+import org.apache.spark.{SparkEnv, SparkException, SparkIllegalStateException, SparkSQLException}
 import org.apache.spark.api.python.PythonFunction.PythonAccumulator
 import org.apache.spark.connect.proto
 import org.apache.spark.internal.{Logging, LogKeys}
@@ -176,7 +176,9 @@ case class SessionHolder(userId: String, sessionId: String, session: SparkSessio
 
     activeOperationIds.synchronized {
       if (activeOperationIds.contains(operationId)) {
-        throw new IllegalStateException(s"ExecuteHolder with opId=${operationId} already exists!")
+        throw new SparkIllegalStateException(
+          errorClass = "SPARK_CONNECT_ILLEGAL_STATE.EXECUTION_STATE.EXECUTE_HOLDER_ALREADY_EXISTS",
+          messageParameters = Map("key" -> operationId))
       }
       activeOperationIds.add(operationId)
     }
@@ -332,7 +334,9 @@ case class SessionHolder(userId: String, sessionId: String, session: SparkSessio
     // called only once, since removing the session from SparkConnectSessionManager.sessionStore is
     // synchronized and guaranteed to happen only once.
     if (closedTimeMs.isDefined) {
-      throw new IllegalStateException(s"Session $key is already closed.")
+      throw new SparkIllegalStateException(
+        errorClass = "SPARK_CONNECT_ILLEGAL_STATE.SESSION_MANAGEMENT.SESSION_ALREADY_CLOSED",
+        messageParameters = Map.empty)
     }
     logInfo(
       log"Closing session with userId: ${MDC(LogKeys.USER_ID, userId)} and " +
@@ -496,9 +500,10 @@ case class SessionHolder(userId: String, sessionId: String, session: SparkSessio
       graphId,
       (_, existing) => {
         if (Option(existing).isDefined) {
-          throw new IllegalStateException(
-            s"Pipeline execution for graph ID $graphId already exists. " +
-              s"Stop the existing execution before starting a new one.")
+          throw new SparkIllegalStateException(
+            errorClass =
+              "SPARK_CONNECT_ILLEGAL_STATE.EXECUTION_STATE.EXECUTE_HOLDER_ALREADY_EXISTS",
+            messageParameters = Map("key" -> s"graph ID $graphId"))
         }
 
         pipelineUpdateContext

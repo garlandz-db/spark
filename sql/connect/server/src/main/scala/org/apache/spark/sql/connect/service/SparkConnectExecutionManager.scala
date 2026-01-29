@@ -28,7 +28,7 @@ import scala.util.control.NonFatal
 import com.google.common.cache.CacheBuilder
 import io.grpc.stub.StreamObserver
 
-import org.apache.spark.{SparkEnv, SparkSQLException}
+import org.apache.spark.{SparkEnv, SparkIllegalStateException, SparkSQLException}
 import org.apache.spark.connect.proto
 import org.apache.spark.internal.{Logging, LogKeys}
 import org.apache.spark.sql.catalyst.util.DateTimeConstants.NANOS_PER_MILLIS
@@ -225,7 +225,9 @@ private[connect] class SparkConnectExecutionManager() extends Logging {
     } else if (executeHolder.isOrphan()) {
       logWarning(log"Reattach to an orphan operation.")
       removeExecuteHolder(executeHolder.key)
-      throw new IllegalStateException("Operation was orphaned because of an internal error.")
+      throw new SparkIllegalStateException(
+        errorClass = "SPARK_CONNECT_ILLEGAL_STATE.EXECUTION_STATE.OPERATION_ORPHANED",
+        messageParameters = Map("operationId" -> executeHolder.key.operationId))
     }
 
     val responseSender =

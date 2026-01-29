@@ -30,7 +30,7 @@ import io.grpc.protobuf.ProtoUtils
 import io.grpc.protobuf.services.ProtoReflectionService
 import io.grpc.stub.StreamObserver
 
-import org.apache.spark.{SparkContext, SparkEnv}
+import org.apache.spark.{SparkContext, SparkEnv, SparkIllegalStateException}
 import org.apache.spark.connect.proto
 import org.apache.spark.connect.proto.{AddArtifactsRequest, AddArtifactsResponse, SparkConnectServiceGrpc}
 import org.apache.spark.connect.proto.SparkConnectServiceGrpc.AsyncService
@@ -455,8 +455,9 @@ object SparkConnectService extends Logging {
     }
 
     if (!started) {
-      throw new IllegalStateException(
-        "Attempting to stop the Spark Connect service that has not been started.")
+      throw new SparkIllegalStateException(
+        errorClass = "SPARK_CONNECT_ILLEGAL_STATE.SESSION_MANAGEMENT.SERVICE_NOT_STARTED",
+        messageParameters = Map.empty)
     }
 
     if (server != null) {

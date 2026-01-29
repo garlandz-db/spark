@@ -17,6 +17,7 @@
 
 package org.apache.spark.sql.connect.service
 
+import org.apache.spark.SparkIllegalStateException
 import org.apache.spark.scheduler.SparkListenerEvent
 import org.apache.spark.util.{Clock}
 
@@ -82,10 +83,12 @@ case class SessionEventsManager(sessionHolder: SessionHolder, clock: Clock) {
       validStatuses: List[SessionStatus],
       eventStatus: SessionStatus): Unit = {
     if (validStatuses.find(s => s == status).isEmpty) {
-      throw new IllegalStateException(s"""
-        sessionId: $sessionId with status ${status}
-        is not within statuses $validStatuses for event $eventStatus
-        """)
+      throw new SparkIllegalStateException(
+        errorClass =
+          "SPARK_CONNECT_ILLEGAL_STATE.STATE_CONSISTENCY.SESSION_STATE_TRANSITION_INVALID",
+        messageParameters = Map(
+          "fromState" -> status.toString,
+          "toState" -> eventStatus.toString))
     }
     _status = eventStatus
   }

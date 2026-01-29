@@ -20,6 +20,7 @@ package org.apache.spark.sql.connect.service
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.google.protobuf.Message
 
+import org.apache.spark.SparkIllegalStateException
 import org.apache.spark.connect.proto
 import org.apache.spark.scheduler.SparkListenerEvent
 import org.apache.spark.sql.catalyst.{QueryPlanningTracker, QueryPlanningTrackerCallback}
@@ -275,16 +276,20 @@ case class ExecuteEventsManager(executeHolder: ExecuteHolder, clock: Clock) {
       validStatuses: List[ExecuteStatus],
       eventStatus: ExecuteStatus): Unit = {
     if (validStatuses.find(s => s == status).isEmpty) {
-      throw new IllegalStateException(s"""
-        operationId: $operationId with status ${status}
-        is not within statuses $validStatuses for event $eventStatus
-        """)
+      throw new SparkIllegalStateException(
+        errorClass =
+          "SPARK_CONNECT_ILLEGAL_STATE.STATE_CONSISTENCY.EXECUTION_STATE_TRANSITION_INVALID",
+        messageParameters = Map(
+          "details" -> s"operationId: $operationId with status $status is not within " +
+            s"statuses $validStatuses for event $eventStatus"))
     }
     if (sessionHolder.eventManager.status != SessionStatus.Started) {
-      throw new IllegalStateException(s"""
-        sessionId: $sessionId with status $sessionStatus
-        is not Started for event $eventStatus
-        """)
+      throw new SparkIllegalStateException(
+        errorClass =
+          "SPARK_CONNECT_ILLEGAL_STATE.STATE_CONSISTENCY.EXECUTION_STATE_TRANSITION_INVALID",
+        messageParameters = Map(
+          "details" -> s"sessionId: $sessionId with status $sessionStatus is not Started " +
+            s"for event $eventStatus"))
     }
     _status = eventStatus
   }

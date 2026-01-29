@@ -19,6 +19,7 @@ package org.apache.spark.sql.connect.pipelines
 
 import scala.collection.mutable.ArrayBuffer
 
+import org.apache.spark.SparkIllegalStateException
 import org.apache.spark.connect.{proto => sc}
 import org.apache.spark.connect.proto.{PipelineCommand, PipelineEvent}
 import org.apache.spark.sql.connect.{SparkConnectServerTest, SparkConnectTestUtils}
@@ -90,7 +91,9 @@ class SparkDeclarativePipelinesServerTest extends SparkConnectServerTest with St
     if (iter.hasNext) {
       iter.next()
     } else {
-      throw new IllegalStateException(s"Invalid response: $iter")
+      throw new SparkIllegalStateException(
+        errorClass = "SPARK_CONNECT_ILLEGAL_STATE.STATE_CONSISTENCY.NO_BATCHES_AVAILABLE",
+        messageParameters = Map.empty)
     }
   }
 

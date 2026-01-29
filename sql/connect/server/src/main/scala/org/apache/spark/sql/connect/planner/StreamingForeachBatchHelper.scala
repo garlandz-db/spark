@@ -24,7 +24,7 @@ import java.util.concurrent.ConcurrentMap
 import scala.jdk.CollectionConverters._
 import scala.util.control.NonFatal
 
-import org.apache.spark.SparkException
+import org.apache.spark.{SparkException, SparkIllegalStateException}
 import org.apache.spark.api.python.{PythonException, PythonWorkerUtils, SimplePythonFunction, SpecialLengths, StreamingPythonRunner}
 import org.apache.spark.internal.Logging
 import org.apache.spark.internal.LogKeys.{DATAFRAME_ID, PYTHON_EXEC, QUERY_ID, RUN_ID_STRING, SESSION_ID, USER_ID}
@@ -182,10 +182,12 @@ object StreamingForeachBatchHelper extends Logging {
                 s"Found error inside foreachBatch Python process: $msg",
               null)
           case otherValue =>
-            throw new IllegalStateException(
-              s"[session: ${sessionHolder.sessionId}] [userId: ${sessionHolder.userId}] " +
-                s"Unexpected return value $otherValue from the " +
-                s"Python worker.")
+            throw new SparkIllegalStateException(
+              errorClass = "SPARK_CONNECT_ILLEGAL_STATE.STREAMING_QUERY.UNEXPECTED_RETURN_VALUE",
+              messageParameters = Map(
+                "details" ->
+                  s"[session: ${sessionHolder.sessionId}] [userId: ${sessionHolder.userId}] " +
+                  s"Unexpected return value $otherValue from the Python worker"))
         }
       } catch {
         // TODO: Better handling (e.g. retries) on exceptions like EOFException to avoid
@@ -231,7 +233,9 @@ object StreamingForeachBatchHelper extends Logging {
 
       Option(cleanerCache.putIfAbsent(key, cleaner)) match {
         case Some(_) =>
-          throw new IllegalStateException(s"Unexpected: a cleaner for query $key is already set")
+          throw new SparkIllegalStateException(
+            errorClass = "SPARK_CONNECT_ILLEGAL_STATE.STATE_CONSISTENCY.CLEANER_ALREADY_SET",
+            messageParameters = Map.empty)
         case None => // Inserted. Normal.
       }
     }
