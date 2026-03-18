@@ -209,24 +209,9 @@ private[execution] class SparkConnectPlanExecution(executeHolder: ExecuteHolder)
       case LocalTableScanExec(_, rows, _) =>
         executePlan.eventsManager.postFinished(Some(rows.length))
         var offset = 0L
-        val batches = ArrowConverters.toBatchWithSchemaIterator(
-          rows.iterator,
-          schema,
-          maxRecordsPerBatch,
-          maxBatchSize,
-          timeZoneId,
-          errorOnDuplicatedFieldNames = false,
-          largeVarTypes = largeVarTypes)
-        try {
-          while (batches.hasNext) {
-            if (Thread.currentThread().isInterrupted()) throw new InterruptedException()
-            val batchBytes = batches.next()
-            val count = batches.rowCountInLastBatch
-            sendBatch(batchBytes, count, offset)
-            offset += count
-          }
-        } finally {
-          batches.close()
+        converter(rows.iterator).foreach { case (bytes, count) =>
+          sendBatch(bytes, count, offset)
+          offset += count
         }
       case _ =>
         SQLExecution.withNewExecutionId(dataframe.queryExecution, Some("collectArrow")) {
